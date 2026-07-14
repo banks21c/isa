@@ -22,6 +22,11 @@
     --success: #2f7a4d;
     --success-bg: #e6f4ea;
     --shadow: 0 1px 2px rgba(31,46,40,0.06), 0 8px 24px rgba(31,46,40,0.08);
+    /* 자산배분 램프: 위험 순서(주식>채권>예금)를 담는 단일 색상 ordinal 램프.
+       라이트 모드는 위험이 높을수록 진하고, 다크 모드는 앵커가 뒤집혀 밝을수록 위험이 높다. */
+    --alloc-equity: #a0412e;
+    --alloc-bond: #cb6854;
+    --alloc-cash: #f3947f;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -37,17 +42,22 @@
       --success: #7fd19f;
       --success-bg: #163524;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+      --alloc-equity: #ff987e;
+      --alloc-bond: #cb6951;
+      --alloc-cash: #993c25;
     }
   }
   :root[data-theme="dark"] {
     --ink: #eef0ea; --ink-soft: #b7bfae; --paper: #12160f; --card: #1c231a; --card-stub: #262f22;
     --line: #3a4536; --line-strong: #4d5a48; --accent: #e07a5f; --accent-ink: #1f2e28;
     --success: #7fd19f; --success-bg: #163524; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+    --alloc-equity: #ff987e; --alloc-bond: #cb6951; --alloc-cash: #993c25;
   }
   :root[data-theme="light"] {
     --ink: #1f2e28; --ink-soft: #536056; --paper: #f1ede1; --card: #fffcf5; --card-stub: #e8e2ce;
     --line: #d8d0ba; --line-strong: #b9b096; --accent: #a13d2e; --accent-ink: #ffffff;
     --success: #2f7a4d; --success-bg: #e6f4ea; --shadow: 0 1px 2px rgba(31,46,40,0.06), 0 8px 24px rgba(31,46,40,0.08);
+    --alloc-equity: #a0412e; --alloc-bond: #cb6854; --alloc-cash: #f3947f;
   }
 
   * { box-sizing: border-box; }
@@ -105,7 +115,7 @@
   .hero-title { font-size: 32px; font-weight: 800; letter-spacing: -0.01em; max-width: 22ch; }
   .hero-desc { margin: 14px 0 28px; color: var(--ink-soft); font-size: 15px; max-width: 48ch; }
 
-  .calc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .field label {
     display: block; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px;
@@ -124,6 +134,11 @@
   .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(161,61,46,0.28); }
   .btn:active { transform: translateY(0); }
   .btn-block { width: 100%; margin-top: 18px; }
+  .btn-ghost {
+    display: block; margin: 10px auto 0; background: none; border: none; cursor: pointer;
+    font-family: inherit; font-size: 13px; color: var(--ink-soft); padding: 6px 8px;
+  }
+  .btn-ghost:hover { color: var(--accent); }
 
   /* passbook cover panel with wax-seal stamp */
   .passbook-cover {
@@ -151,6 +166,72 @@
     .passbook { grid-template-columns: 1fr; }
     .passbook-cover { border-left: none; border-top: 1px solid var(--line); flex-direction: row; padding: 20px; }
     .calc-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ---------- age strategy ---------- */
+  #strategy { display: none; padding-bottom: 0; }
+  #strategy.is-visible { display: block; }
+  .strategy-card {
+    background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 8px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 190px 1fr; overflow: hidden;
+  }
+  .strategy-stub {
+    background: var(--card-stub); padding: 20px; border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; justify-content: space-between; gap: 14px;
+  }
+  .strategy-age { font-size: 22px; font-weight: 800; }
+  .strategy-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+
+  .alloc-total { display: flex; align-items: baseline; gap: 8px; }
+  .alloc-total .k { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-soft); }
+  .alloc-total .v { font-size: 26px; font-weight: 800; }
+
+  /* 100% 스택 막대: 세그먼트 사이 2px 간격은 카드 배경색이 비쳐 보이며 구분자 역할을 한다. */
+  .alloc-bar { display: flex; gap: 2px; height: 24px; }
+  .alloc-seg { height: 100%; min-width: 3px; }
+  .alloc-seg:first-child { border-radius: 4px 0 0 4px; }
+  .alloc-seg:last-child { border-radius: 0 4px 4px 0; }
+  .alloc-seg.equity { background: var(--alloc-equity); }
+  .alloc-seg.bond { background: var(--alloc-bond); }
+  .alloc-seg.cash { background: var(--alloc-cash); }
+
+  .alloc-legend { display: flex; flex-direction: column; gap: 0; }
+  .alloc-row {
+    display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+    padding: 9px 0; border-bottom: 1px dashed var(--line);
+  }
+  .alloc-row:last-child { border-bottom: none; }
+  .alloc-key { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+  .alloc-swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .alloc-swatch.equity { background: var(--alloc-equity); }
+  .alloc-swatch.bond { background: var(--alloc-bond); }
+  .alloc-swatch.cash { background: var(--alloc-cash); }
+  .alloc-pct { font-size: 13.5px; font-weight: 700; color: var(--ink); min-width: 44px; text-align: right; }
+  .alloc-won { font-size: 13px; color: var(--ink-soft); min-width: 92px; text-align: right; }
+
+  .strategy-note { font-size: 12.5px; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 12px; }
+  .strategy-basis {
+    font-size: 11.5px; line-height: 1.7; color: var(--ink-soft);
+    border-top: 1px solid var(--line); padding-top: 12px;
+  }
+  .strategy-basis strong { color: var(--ink); }
+  .strategy-warn { font-size: 12.5px; color: var(--accent); font-weight: 600; }
+  .match-line { font-size: 13px; color: var(--ink-soft); }
+  .match-line strong { color: var(--ink); }
+
+  /* 추천 유형과 일치하는 기관 카드 강조 */
+  .ledger-entry.is-match { border-left-width: 6px; }
+  .match-badge {
+    display: none; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase; background: var(--accent); color: var(--accent-ink);
+    border-radius: 3px; padding: 2px 7px; width: fit-content;
+  }
+  .ledger-entry.is-match .match-badge { display: block; }
+
+  @media (max-width: 700px) {
+    .strategy-card { grid-template-columns: 1fr; }
+    .strategy-stub { border-right: none; border-bottom: 1px solid var(--line); flex-direction: row; align-items: center; justify-content: space-between; }
   }
 
   section { padding: 48px 0; }
@@ -254,6 +335,16 @@
 
           <div class="calc-grid">
             <div class="field">
+              <label for="age">연령대</label>
+              <select id="age">
+                <option value="20">20대</option>
+                <option value="30" selected>30대</option>
+                <option value="40">40대</option>
+                <option value="50">50대</option>
+                <option value="60">60대 이상</option>
+              </select>
+            </div>
+            <div class="field">
               <label for="type">유형</label>
               <select id="type">
                 <option>중개형</option>
@@ -262,19 +353,53 @@
               </select>
             </div>
             <div class="field">
-              <label for="amount">연 납입액</label>
-              <input id="amount" type="number" placeholder="예: 1000" min="0">
+              <label for="amount">연 납입액(만원)</label>
+              <input id="amount" type="number" placeholder="예: 1000" min="0" max="2000">
             </div>
             <div class="field">
-              <label for="years">가입 기간(년)</label>
+              <label for="years">기간(년)</label>
               <input id="years" type="number" placeholder="3" min="3" max="10">
             </div>
           </div>
-          <button type="button" class="btn btn-block" onclick="document.getElementById('plans').scrollIntoView({behavior:'smooth'})">기관별 비교 보기</button>
+          <button type="button" class="btn btn-block" onclick="buildStrategy()">내 연령대 전략 보기</button>
+          <button type="button" class="btn-ghost" onclick="showPlansOnly()">전략 없이 기관 비교만 보기 →</button>
         </div>
         <div class="passbook-cover">
           <div class="seal">비과세<br>3년 만기</div>
           <div class="cover-label">Tax-Free Ledger</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="strategy">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 class="section-title">연령대별 추천 전략</h2>
+        <span class="section-note">'100 − 나이' 통념 규칙 기준 · 투자권유가 아닙니다</span>
+      </div>
+
+      <div class="strategy-card">
+        <div class="strategy-stub">
+          <div>
+            <div class="strategy-age" id="strategyAge">30대</div>
+            <span class="type-tag" id="strategyTone">성장</span>
+          </div>
+          <div class="acct-no mono" id="strategyType">추천 유형 —</div>
+        </div>
+        <div class="strategy-body">
+          <div class="alloc-total">
+            <span class="k" id="allocTotalLabel">총 납입 예상</span>
+            <span class="v" id="allocTotal">—</span>
+          </div>
+
+          <!-- 막대는 장식이며, 바로 아래 범례가 같은 값을 텍스트로 모두 담는다. -->
+          <div class="alloc-bar" id="allocBar" aria-hidden="true"></div>
+          <div class="alloc-legend" id="allocLegend"></div>
+
+          <div class="strategy-note" id="strategyDesc"></div>
+          <div class="match-line" id="strategyMatch"></div>
+          <div class="strategy-basis" id="strategyBasis"></div>
         </div>
       </div>
     </div>
@@ -289,11 +414,12 @@
 
       <div class="plans">
 
-        <div class="ledger-entry rise">
+        <div class="ledger-entry rise" data-type="중개형">
           <div class="ledger-stub">
             <div>
               <div class="inst-name">A증권</div>
               <span class="type-tag">중개형</span>
+              <div class="match-badge">연령대 추천</div>
             </div>
             <div class="acct-no mono">ISA-DEMO-01</div>
           </div>
@@ -312,11 +438,12 @@
           </div>
         </div>
 
-        <div class="ledger-entry rise rise-delay-1">
+        <div class="ledger-entry rise rise-delay-1" data-type="신탁형">
           <div class="ledger-stub">
             <div>
               <div class="inst-name">B은행</div>
               <span class="type-tag">신탁형</span>
+              <div class="match-badge">연령대 추천</div>
             </div>
             <div class="acct-no mono">ISA-DEMO-02</div>
           </div>
@@ -335,11 +462,12 @@
           </div>
         </div>
 
-        <div class="ledger-entry rise rise-delay-2">
+        <div class="ledger-entry rise rise-delay-2" data-type="중개형">
           <div class="ledger-stub">
             <div>
               <div class="inst-name">C증권</div>
               <span class="type-tag">중개형</span>
+              <div class="match-badge">연령대 추천</div>
             </div>
             <div class="acct-no mono">ISA-DEMO-03</div>
           </div>
@@ -358,11 +486,12 @@
           </div>
         </div>
 
-        <div class="ledger-entry rise rise-delay-2">
+        <div class="ledger-entry rise rise-delay-2" data-type="일임형">
           <div class="ledger-stub">
             <div>
               <div class="inst-name">D증권</div>
               <span class="type-tag">일임형</span>
+              <div class="match-badge">연령대 추천</div>
             </div>
             <div class="acct-no mono">ISA-DEMO-04</div>
           </div>
@@ -439,6 +568,149 @@
   </footer>
 
   <script>
+    /* 연령대별 자산배분.
+       비중은 하드코딩하지 않고 아래 두 규칙에서 유도한다 — 근거를 코드로 남겨 검산할 수 있게 하기 위함이다.
+         1) 주식형 = 100 - 나이   ('100 - 나이' 통념 규칙, 연령대 중간값 적용)
+         2) 예금   = 5% 에서 시작해 연령대가 올라갈수록 5%p 씩 증가 (은퇴가 가까울수록 커지는 유동성 수요)
+         3) 채권형 = 나머지
+       공식 기준이 아니라 널리 쓰이는 참고 규칙이며, 이 사실을 화면에도 표기한다. */
+    const CASH_BASE = 5;  // 20대 예금 비중(%)
+    const CASH_STEP = 5;  // 연령대 한 칸당 예금 비중 증가폭(%p)
+
+    const AGE_BANDS = [
+      { key: '20', label: '20대', midAge: 25, tone: '공격적 성장', types: ['중개형'],
+        desc: '투자 기간이 길어 단기 변동을 감내할 여력이 큽니다. 주식형 비중을 높게 가져가되, ISA는 3년 의무가입이라 중도에 써야 할 자금은 넣지 않는 편이 좋습니다.' },
+      { key: '30', label: '30대', midAge: 35, tone: '성장', types: ['중개형'],
+        desc: '자산 형성기라 성장 자산 비중을 유지할 만합니다. 다만 주택자금·결혼 등 목돈 계획이 있다면 예금·파킹 비중을 늘려 유동성을 먼저 확보하세요.' },
+      { key: '40', label: '40대', midAge: 45, tone: '균형', types: ['중개형', '일임형'],
+        desc: '은퇴까지 기간이 남아 성장과 안정을 함께 가져가는 구간입니다. 채권형을 늘려 변동성을 낮추고, 연금저축·IRP와 역할을 나누는 것이 좋습니다.' },
+      { key: '50', label: '50대', midAge: 55, tone: '안정 지향', types: ['일임형', '신탁형'],
+        desc: '손실을 회복할 기간이 짧아지는 시기입니다. 안전자산 비중이 주식형을 넘어서고, 만기 자금을 연금계좌로 이전하면 세액공제도 함께 노릴 수 있습니다.' },
+      { key: '60', label: '60대 이상', midAge: 65, tone: '보수', types: ['신탁형'],
+        desc: '인출을 앞둔 구간이라 원금 보존에 무게를 둡니다. 다만 은퇴 후 기간도 길어진 만큼 물가를 따라갈 최소한의 주식형은 남기고, 비과세 한도(일반형 200만원·서민형 400만원) 안에서 이자·배당을 관리하세요.' },
+    ];
+
+    // 두 규칙으로 각 연령대의 비중을 산출한다. 합은 항상 100%.
+    const STRATEGY = {};
+    AGE_BANDS.forEach(function (band, i) {
+      const equity = 100 - band.midAge;
+      const cash = CASH_BASE + i * CASH_STEP;
+      STRATEGY[band.key] = Object.assign({}, band, { equity: equity, bond: 100 - equity - cash, cash: cash });
+    });
+
+    const BUCKETS = [
+      { key: 'equity', label: '국내외 주식형 ETF' },
+      { key: 'bond', label: '채권형' },
+      { key: 'cash', label: '예금 / 파킹' },
+    ];
+
+    const ANNUAL_CAP = 2000; // ISA 연 납입한도(만원)
+    const MIN_YEARS = 3;     // 의무가입기간
+
+    // 앞 단어의 받침 유무에 따라 조사를 고른다(예: A증권'이' / 하나'가').
+    function josa(word, hasBatchim, noBatchim) {
+      const code = word.charCodeAt(word.length - 1);
+      if (code < 0xac00 || code > 0xd7a3) return hasBatchim; // 한글이 아니면 기본값
+      return (code - 0xac00) % 28 ? hasBatchim : noBatchim;
+    }
+
+    function formatWon(man) {
+      const eok = Math.floor(man / 10000);
+      const rest = man % 10000;
+      if (eok && rest) return eok + '억 ' + rest.toLocaleString() + '만원';
+      if (eok) return eok + '억원';
+      return man.toLocaleString() + '만원';
+    }
+
+    // 화면을 다시 그리기만 한다. 노출/스크롤은 buildStrategy()가 맡는다.
+    function renderStrategy() {
+      const age = document.getElementById('age').value;
+      const s = STRATEGY[age];
+
+      const yearsRaw = parseInt(document.getElementById('years').value, 10);
+      const years = Math.min(Math.max(yearsRaw || MIN_YEARS, MIN_YEARS), 10);
+      const amountRaw = parseInt(document.getElementById('amount').value, 10);
+      const amount = Math.min(Math.max(amountRaw || 0, 0), ANNUAL_CAP);
+      const total = amount * years;
+
+      document.getElementById('strategyAge').textContent = document.getElementById('age').selectedOptions[0].textContent;
+      document.getElementById('strategyTone').textContent = s.tone;
+      document.getElementById('strategyType').textContent = '추천 유형 ' + s.types.join(' · ');
+      document.getElementById('allocTotalLabel').textContent = years + '년 총 납입 예상';
+      document.getElementById('allocTotal').textContent = total ? formatWon(total) : '연 납입액을 입력하세요';
+
+      const bar = document.getElementById('allocBar');
+      const legend = document.getElementById('allocLegend');
+      bar.innerHTML = '';
+      legend.innerHTML = '';
+
+      BUCKETS.forEach(function (b) {
+        const pct = s[b.key];
+
+        const seg = document.createElement('div');
+        seg.className = 'alloc-seg ' + b.key;
+        seg.style.flex = pct + ' 0 0';
+        seg.title = b.label + ' ' + pct + '%';
+        bar.appendChild(seg);
+
+        const row = document.createElement('div');
+        row.className = 'alloc-row';
+        row.innerHTML =
+          '<span class="alloc-key"><span class="alloc-swatch ' + b.key + '"></span>' + b.label + '</span>' +
+          '<span class="alloc-pct">' + pct + '%</span>' +
+          '<span class="alloc-won">' + (total ? formatWon(Math.round(total * pct / 100)) : '—') + '</span>';
+        legend.appendChild(row);
+      });
+
+      const warns = [];
+      if (amountRaw > ANNUAL_CAP) warns.push('ISA 납입한도는 연 ' + ANNUAL_CAP.toLocaleString() + '만원이라 ' + ANNUAL_CAP.toLocaleString() + '만원으로 계산했습니다.');
+      if (yearsRaw && yearsRaw < MIN_YEARS) warns.push('의무가입기간이 ' + MIN_YEARS + '년이라 ' + MIN_YEARS + '년으로 계산했습니다.');
+      document.getElementById('strategyDesc').innerHTML =
+        s.desc + (warns.length ? '<div class="strategy-warn">' + warns.join(' ') + '</div>' : '');
+
+      const entries = document.querySelectorAll('.ledger-entry');
+      entries.forEach(function (el) {
+        el.classList.toggle('is-match', s.types.indexOf(el.dataset.type) !== -1);
+      });
+      const names = Array.prototype.map.call(
+        document.querySelectorAll('.ledger-entry.is-match .inst-name'), function (e) { return e.textContent; });
+
+      const last = names[names.length - 1];
+      let match = '아래 원장에서 <strong>' + names.join(' · ') + '</strong>' +
+        josa(last, '이', '가') + ' 이 연령대 추천 유형에 해당합니다.';
+      const chosen = document.getElementById('type').value;
+      if (s.types.indexOf(chosen) === -1) {
+        match += ' 선택하신 <strong>' + chosen + '</strong>도 가입은 가능하지만, ' + s.tone + ' 성향에는 ' + s.types.join('·') + '이 더 가깝습니다.';
+      }
+      document.getElementById('strategyMatch').innerHTML = match;
+
+      // 숫자가 어디서 나온 값인지 화면에서 바로 확인할 수 있게 산출 과정을 그대로 노출한다.
+      document.getElementById('strategyBasis').innerHTML =
+        '주식형 <strong>' + s.equity + '%</strong>는 \'100 − 나이\' 통념 규칙을 ' + s.label +
+        ' 중간값인 ' + s.midAge + '세에 적용한 값입니다(100 − ' + s.midAge + ' = ' + s.equity + ').' +
+        ' 예금 <strong>' + s.cash + '%</strong>는 은퇴가 가까울수록 커지는 유동성 수요를 반영해 연령대마다 ' + CASH_STEP +
+        '%p씩 늘린 값이고, 나머지 <strong>' + s.bond + '%</strong>를 채권형에 배분했습니다.' +
+        ' 금융회사나 감독당국의 공식 기준이 아니라 널리 쓰이는 참고 규칙입니다.';
+    }
+
+    function buildStrategy() {
+      renderStrategy();
+      const section = document.getElementById('strategy');
+      section.classList.add('is-visible');
+      section.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function showPlansOnly() {
+      document.getElementById('plans').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 전략 카드가 이미 떠 있으면 입력을 바꿀 때마다 다시 계산한다(버튼 재클릭 불필요).
+    ['age', 'type', 'amount', 'years'].forEach(function (id) {
+      document.getElementById(id).addEventListener('input', function () {
+        if (document.getElementById('strategy').classList.contains('is-visible')) renderStrategy();
+      });
+    });
+
     function selectPlan(name) {
       document.getElementById('planField').value = name;
       document.getElementById('consult').scrollIntoView({ behavior: 'smooth' });
